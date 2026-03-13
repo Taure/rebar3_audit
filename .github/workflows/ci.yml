@@ -6,27 +6,23 @@ on:
   pull_request:
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
+  ci:
+    uses: Taure/erlang-ci/.github/workflows/ci.yml@v1
+    with:
+      otp-version: '28'
+      enable-dialyzer: false
+      enable-xref: false
 
+  dogfood:
+    name: Self-audit
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: erlef/setup-beam@v1
+      - uses: Taure/erlang-ci@v1
         with:
-          otp-version: "28"
-          rebar3-version: "3"
-
+          otp-version: '28'
       - name: Compile
         run: rebar3 compile
-
-      - name: Format check
-        run: rebar3 fmt --check
-
-      - name: EUnit
-        run: rebar3 eunit
-
       - name: Dogfood (self-audit)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
