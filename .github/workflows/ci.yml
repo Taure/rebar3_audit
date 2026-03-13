@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "28"
+          rebar3-version: "3"
+
+      - name: Compile
+        run: rebar3 compile
+
+      - name: Format check
+        run: rebar3 fmt --check
+
+      - name: EUnit
+        run: rebar3 eunit
+
+      - name: Dogfood (self-audit)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: rebar3 audit --token "${GITHUB_TOKEN}"

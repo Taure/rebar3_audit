@@ -1,0 +1,68 @@
+name: Rebar3 Audit
+description: Audit rebar3 dependencies for known vulnerabilities using the GitHub Advisory Database
+
+author: Daniel Widgren
+
+branding:
+  icon: shield
+  color: red
+
+inputs:
+  token:
+    description: GitHub token for API access (increases rate limit)
+    required: false
+    default: ${{ github.token }}
+  ignore:
+    description: Comma-separated GHSA IDs to ignore
+    required: false
+    default: ""
+  format:
+    description: "Output format: human or json"
+    required: false
+    default: human
+  otp-version:
+    description: OTP version to use
+    required: false
+    default: "28"
+  rebar3-version:
+    description: Rebar3 version to use
+    required: false
+    default: "3"
+
+runs:
+  using: composite
+
+  steps:
+    - name: Install Erlang
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: ${{ inputs.otp-version }}
+        rebar3-version: ${{ inputs.rebar3-version }}
+
+    - name: Inject rebar3_audit plugin
+      run: |
+        echo '{project_plugins, [{rebar3_audit, {git, "https://github.com/Taure/rebar3_audit.git", {branch, "main"}}}]}.' >> rebar.config
+      shell: bash
+
+    - name: Run audit
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+        IGNORE_FLAGS=""
+        if [ -n "${{ inputs.ignore }}" ]; then
+          IFS=',' read -ra IDS <<< "${{ inputs.ignore }}"
+          for id in "${IDS[@]}"; do
+            IGNORE_FLAGS="${IGNORE_FLAGS} --ignore $(echo "${id}" | xargs)"
+          done
+        fi
+
+        rebar3 audit \
+          --token "${GITHUB_TOKEN}" \
+          --format "${{ inputs.format }}" \
+          ${IGNORE_FLAGS}
+      shell: bash
+
+    - name: Clean up rebar.config
+      if: always()
+      run: git checkout rebar.config 2>/dev/null || true
+      shell: bash
