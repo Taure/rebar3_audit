@@ -41,7 +41,7 @@ runs:
 
     - name: Inject rebar3_audit plugin
       run: |
-        echo '{project_plugins, [{rebar3_audit, {git, "https://github.com/Taure/rebar3_audit.git", {branch, "main"}}}]}.' >> rebar.config
+        echo '{project_plugins, [{rebar3_audit, {git, "https://github.com/Taure/rebar3_audit.git", {tag, "v0.1.0"}}}]}.' >> rebar.config
       shell: bash
 
     - name: Run audit
