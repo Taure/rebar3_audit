@@ -30,4 +30,6 @@ jobs:
       - name: Dogfood (self-audit)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: rebar3 audit --token "${GITHUB_TOKEN}"
+        run: |
+          echo '{project_plugins, [rebar3_audit]}.' >> rebar.config
+          rebar3 audit --token "${GITHUB_TOKEN}"
