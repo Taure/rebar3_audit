@@ -1,0 +1,10 @@
+{application, rebar3_audit, [
+    {description, "Audit rebar3 dependencies for known vulnerabilities"},
+    {vsn, "git"},
+    {registered, []},
+    {applications, [kernel, stdlib, inets, ssl, public_key]},
+    {env, []},
+    {modules, []},
+    {licenses, ["Apache-2.0"]},
+    {links, [{"GitHub", "https://github.com/erlef/rebar3_audit"}]}
+]}.
