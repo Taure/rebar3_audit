@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   ci:
     uses: Taure/erlang-ci/.github/workflows/ci.yml@v1
@@ -12,6 +16,7 @@ jobs:
       otp-version: '28'
       enable-dialyzer: false
       enable-xref: false
+      enable-dependency-submission: true
 
   dogfood:
     name: Self-audit
