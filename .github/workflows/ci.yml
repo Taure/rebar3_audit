@@ -16,6 +16,7 @@ jobs:
       otp-version: '28'
       enable-dialyzer: false
       enable-xref: false
+      enable-ex-doc: true
       enable-dependency-submission: true
 
   dogfood:
