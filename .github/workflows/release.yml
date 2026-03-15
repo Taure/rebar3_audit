@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    uses: Taure/erlang-ci/.github/workflows/release.yml@v1
+
+  update-major-tag:
+    name: Update floating major tag
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update floating major tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No tags found, skipping"
+            exit 0
+          fi
+
+          MAJOR=$(echo "$LATEST_TAG" | sed 's/^v//' | cut -d. -f1)
+          echo "Updating v${MAJOR} to point at ${LATEST_TAG}"
+          git tag -f "v${MAJOR}" "$LATEST_TAG"
+          git push origin "v${MAJOR}" --force
