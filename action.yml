@@ -20,6 +20,10 @@ inputs:
     description: "Output format: human or json"
     required: false
     default: human
+  level:
+    description: "Minimum severity to fail on: critical, high, medium, low"
+    required: false
+    default: low
   otp-version:
     description: OTP version to use
     required: false
@@ -59,6 +63,7 @@ runs:
         rebar3 audit \
           --token "${GITHUB_TOKEN}" \
           --format "${{ inputs.format }}" \
+          --level "${{ inputs.level }}" \
           ${IGNORE_FLAGS}
       shell: bash
 

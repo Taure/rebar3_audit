@@ -20,7 +20,9 @@ init(State) ->
             {token, $t, "token", string,
                 "GitHub token for API access (or set GITHUB_TOKEN)"},
             {format, $f, "format", {string, "human"},
-                "Output format: human, json"}
+                "Output format: human, json"},
+            {level, $l, "level", {string, "low"},
+                "Minimum severity to fail on: critical, high, medium, low"}
         ]},
         {short_desc, "Audit dependencies for known vulnerabilities"},
         {desc,
@@ -34,6 +36,7 @@ do(State) ->
     Token = resolve_token(Args),
     IgnoreIds = collect_ignores(Args),
     Format = proplists:get_value(format, Args, "human"),
+    Level = parse_level(proplists:get_value(level, Args, "low")),
     Deps = parse_lock(State),
     case Deps of
         [] ->
@@ -49,13 +52,18 @@ do(State) ->
                         Deps, Advisories, IgnoreIds
                     ),
                     report(Vulns, Deps, Format),
-                    case Vulns of
+                    Failing = [
+                        V
+                     || #{severity := S} = V <- Vulns,
+                        severity_rank(S) >= Level
+                    ],
+                    case Failing of
                         [] ->
                             {ok, State};
                         _ ->
                             {error,
                                 {?MODULE,
-                                    {vulnerabilities_found, length(Vulns)}}}
+                                    {vulnerabilities_found, length(Failing)}}}
                     end;
                 {error, Reason} ->
                     {error, {?MODULE, {fetch_failed, Reason}}}
@@ -209,6 +217,24 @@ report_vuln(#{
     end,
     rebar_api:warn("  │ URL:        ~s", [Url]),
     rebar_api:warn("  │", []).
+
+parse_level("critical") ->
+    4;
+parse_level("high") ->
+    3;
+parse_level("medium") ->
+    2;
+parse_level("low") ->
+    1;
+parse_level(Other) ->
+    rebar_api:warn("Unknown severity level ~p, defaulting to low", [Other]),
+    1.
+
+severity_rank(<<"critical">>) -> 4;
+severity_rank(<<"high">>) -> 3;
+severity_rank(<<"medium">>) -> 2;
+severity_rank(<<"low">>) -> 1;
+severity_rank(_) -> 0.
 
 severity_label(<<"critical">>) -> "🔴 CRITICAL";
 severity_label(<<"high">>) -> "🟠 HIGH    ";
