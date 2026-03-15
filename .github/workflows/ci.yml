@@ -12,6 +12,7 @@ jobs:
       otp-version: '28'
       enable-dialyzer: false
       enable-xref: false
+      enable-dependency-submission: true
 
   dogfood:
     name: Self-audit
