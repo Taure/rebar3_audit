@@ -31,11 +31,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: Taure/erlang-ci@v1
         with:
-      enable-summary: true
-      enable-sbom-scan: true
-      enable-sbom: true
-      enable-coverage: true
-      enable-audit: true
           otp-version: '28'
       - name: Compile
         run: rebar3 compile
