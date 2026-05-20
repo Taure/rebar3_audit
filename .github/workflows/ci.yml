@@ -11,13 +11,12 @@ permissions:
 
 jobs:
   ci:
-    uses: Taure/erlang-ci/.github/workflows/ci.yml@v1
+    uses: Taure/erlang-ci/.github/workflows/ci.yml@v2
     with:
       enable-summary: true
       enable-sbom-scan: true
       enable-sbom: true
       enable-coverage: true
-      enable-audit: true
       otp-version: '28'
       enable-dialyzer: false
       enable-xref: false
@@ -29,13 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Taure/erlang-ci@v1
+      - uses: Taure/erlang-ci@v2
         with:
-      enable-summary: true
-      enable-sbom-scan: true
-      enable-sbom: true
-      enable-coverage: true
-      enable-audit: true
           otp-version: '28'
       - name: Compile
         run: rebar3 compile
