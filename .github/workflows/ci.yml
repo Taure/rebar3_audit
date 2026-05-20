@@ -17,7 +17,6 @@ jobs:
       enable-sbom-scan: true
       enable-sbom: true
       enable-coverage: true
-      enable-audit: true
       otp-version: '28'
       enable-dialyzer: false
       enable-xref: false
