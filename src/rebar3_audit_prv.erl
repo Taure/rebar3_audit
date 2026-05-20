@@ -201,21 +201,21 @@ report_vuln(#{
     current_version := CurrentVsn
 }) ->
     SevStr = severity_label(Severity),
-    rebar_api:warn("  ~s ~s (~s)", [SevStr, Package, CurrentVsn]),
-    rebar_api:warn("  │ ~s", [Summary]),
-    rebar_api:warn("  │ Advisory:   ~s~s", [
+    rebar_api:warn("  ~ts ~ts (~ts)", [SevStr, Package, CurrentVsn]),
+    rebar_api:warn("  │ ~ts", [Summary]),
+    rebar_api:warn("  │ Advisory:   ~ts~ts", [
         GhsaId,
         case CveId of
             null -> "";
-            _ -> io_lib:format(" (~s)", [CveId])
+            _ -> io_lib:format(" (~ts)", [CveId])
         end
     ]),
-    rebar_api:warn("  │ Vulnerable: ~s", [Range]),
+    rebar_api:warn("  │ Vulnerable: ~ts", [Range]),
     case Patched of
         null -> rebar_api:warn("  │ Fix:        No fix available", []);
-        _ -> rebar_api:warn("  │ Fix:        Upgrade to ~s", [Patched])
+        _ -> rebar_api:warn("  │ Fix:        Upgrade to ~ts", [Patched])
     end,
-    rebar_api:warn("  │ URL:        ~s", [Url]),
+    rebar_api:warn("  │ URL:        ~ts", [Url]),
     rebar_api:warn("  │", []).
 
 parse_level("critical") ->
