@@ -2,8 +2,13 @@
 
 -export([fetch/1]).
 
+-ifdef(TEST).
+-export([next_url/1]).
+-endif.
+
 -define(API_URL, "https://api.github.com/advisories").
 -define(PER_PAGE, 100).
+-define(MAX_PAGES, 100).
 
 -type advisory() :: #{
     ghsa_id := binary(),
@@ -26,7 +31,10 @@
     {ok, [advisory()]} | {error, term()}.
 fetch(Token) ->
     ok = ensure_started(),
-    fetch_pages(Token, 1, []).
+    InitialURL = lists:flatten(
+        io_lib:format("~s?ecosystem=erlang&per_page=~b", [?API_URL, ?PER_PAGE])
+    ),
+    fetch_pages(Token, InitialURL, 1, []).
 
 %%--------------------------------------------------------------------
 %% Internal
@@ -37,14 +45,16 @@ ensure_started() ->
     {ok, _} = application:ensure_all_started(ssl),
     ok.
 
-fetch_pages(Token, Page, Acc) ->
-    URL = io_lib:format(
-        "~s?ecosystem=erlang&per_page=~b&page=~b",
-        [?API_URL, ?PER_PAGE, Page]
-    ),
+%% The GitHub advisories endpoint is cursor-paginated: each response's Link
+%% header carries the full next-page URL (with an `after` cursor). Follow that
+%% rather than incrementing a `page` number, which the endpoint ignores - doing
+%% so re-fetches page one forever once an ecosystem exceeds one page.
+fetch_pages(_Token, _URL, Page, _Acc) when Page > ?MAX_PAGES ->
+    {error, too_many_pages};
+fetch_pages(Token, URL, Page, Acc) ->
     Headers = headers(Token),
     SSLOpts = ssl_opts(),
-    Request = {lists:flatten(URL), Headers},
+    Request = {URL, Headers},
     HttpOpts = [{ssl, SSLOpts}, {timeout, 30000}],
     Opts = [{body_format, binary}, {full_result, true}],
     case httpc:request(get, Request, HttpOpts, Opts) of
@@ -52,15 +62,12 @@ fetch_pages(Token, Page, Acc) ->
             case json:decode(Body) of
                 Advisories when is_list(Advisories) ->
                     Parsed = [parse_advisory(A) || A <- Advisories],
-                    case length(Advisories) of
-                        ?PER_PAGE ->
-                            case has_next_page(RespHeaders) of
-                                true ->
-                                    fetch_pages(Token, Page + 1, Acc ++ Parsed);
-                                false ->
-                                    {ok, Acc ++ Parsed}
-                            end;
-                        _ ->
+                    case next_url(RespHeaders) of
+                        {ok, NextURL} ->
+                            fetch_pages(
+                                Token, NextURL, Page + 1, Acc ++ Parsed
+                            );
+                        none ->
                             {ok, Acc ++ Parsed}
                     end;
                 _ ->
@@ -93,10 +100,25 @@ ssl_opts() ->
         ]}
     ].
 
-has_next_page(Headers) ->
+%% Extract the `rel="next"` URL from an RFC 5988 Link header, e.g.
+%% `<https://api.github.com/advisories?...&after=CURSOR>; rel="next", <...>; rel="last"`.
+next_url(Headers) ->
     case proplists:get_value("link", Headers) of
-        undefined -> false;
-        Link -> string:find(Link, "rel=\"next\"") =/= nomatch
+        undefined -> none;
+        Link -> next_url_segment(string:split(Link, ",", all))
+    end.
+
+next_url_segment([]) ->
+    none;
+next_url_segment([Segment | Rest]) ->
+    case string:find(Segment, "rel=\"next\"") of
+        nomatch ->
+            next_url_segment(Rest);
+        _ ->
+            case re:run(Segment, "<([^>]+)>", [{capture, [1], list}]) of
+                {match, [URL]} -> {ok, URL};
+                nomatch -> next_url_segment(Rest)
+            end
     end.
 
 parse_advisory(
