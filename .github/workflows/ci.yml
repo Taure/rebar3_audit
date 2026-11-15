@@ -39,3 +39,48 @@ jobs:
         run: |
           sed -i 's/{project_plugins, \[/{project_plugins, [{rebar3_audit, {git, "https:\/\/github.com\/Taure\/rebar3_audit.git", {branch, "main"}}},/' rebar.config
           rebar3 audit --token "${GITHUB_TOKEN}"
+
+  release:
+    needs: ci
+    if: ${{ github.event_name == 'push' }}
+    uses: Taure/erlang-ci/.github/workflows/release.yml@v2.3.2
+    permissions:
+      contents: write
+
+  hex-publish:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    uses: Taure/erlang-ci/.github/workflows/hex-publish.yml@v2.3.2
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+      otp-version: '28'
+      rebar3-version: '3.28.0'
+
+  update-major-tag:
+    name: Update floating major tag
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update floating major tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No tags found, skipping"
+            exit 0
+          fi
+
+          MAJOR=$(echo "$LATEST_TAG" | sed 's/^v//' | cut -d. -f1)
+          echo "Updating v${MAJOR} to point at ${LATEST_TAG}"
+          git tag -f "v${MAJOR}" "$LATEST_TAG"
+          git push origin "v${MAJOR}" --force
